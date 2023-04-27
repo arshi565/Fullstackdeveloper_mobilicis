@@ -1,0 +1,64 @@
+// Import required libraries
+const express = require('express');
+const mysql = require('mysql');
+
+// Create a connection to the MySQL database
+const connection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: 'password',
+  database: 'mydatabase'
+});
+
+// Connect to the database
+connection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to database:', err);
+    return;
+  }
+  console.log('Connected to database');
+});
+
+// Create an Express app
+const app = express();
+
+// Define a route to fetch and display the data
+app.get('/data', (req, res) => {
+  // Define the SQL query to fetch the required data
+  const query = `
+    SELECT *
+    FROM users
+    WHERE (income < 5 AND car IN ('BMW', 'Mercedes'))
+       OR (gender = 'Male' AND phone_price > 10000)
+       OR (last_name LIKE 'M%' AND LENGTH(quote) > 15 AND email LIKE '%M%')
+       OR (car IN ('BMW', 'Mercedes', 'Audi') AND email NOT REGEXP '[0-9]')
+    ORDER BY income DESC
+    LIMIT 10
+  `;
+
+  // Execute the SQL query
+  connection.query(query, (err, results) => {
+    if (err) {
+      console.error('Error executing query:', err);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+
+    // Format the data as an HTML table
+    let table = '<table>';
+    table += '<tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Gender</th><th>Income</th><th>Car</th><th>Phone Price</th><th>Quote</th></tr>';
+    for (let i = 0; i < results.length; i++) {
+      const user = results[i];
+      table += `<tr><td>${user.id}</td><td>${user.first_name}</td><td>${user.last_name}</td><td>${user.email}</td><td>${user.gender}</td><td>${user.income}</td><td>${user.car}</td><td>${user.phone_price}</td><td>${user.quote}</td></tr>`;
+    }
+    table += '</table>';
+
+    // Send the formatted data as a response
+    res.send(table);
+  });
+});
+
+// Start the server
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
+});
